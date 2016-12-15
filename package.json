@@ -1,0 +1,12 @@
+{
+  "name": "video_portfolio_content",
+  "version": "1.0.0",
+  "description": "",
+  "main": "video_portfolio_content.js",
+  "dependencies": {
+    "jimp": "^0.2.27"
+  },
+  "devDependencies": {},
+  "author": "Admiral Potato <admiral@nuclearpixel.com>",
+  "license": "CC-BY-NC-4.0"
+}
