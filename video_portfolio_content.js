@@ -1,7 +1,7 @@
 //usage: node video_portfolio_content.js doubly_pyramidal-48-png 85
 //                              inputPath^                quality^
-var Jimp = require("jimp");
 var fs = require("fs");
+var child_process = require("child_process");
 var jerpDerp = function(pngName){return pngName.replace(/png/gi, 'jpg');};
 var inputPath = process.argv[2];
 var quality = parseInt(process.argv[3], 10);
@@ -32,30 +32,31 @@ if(!fs.existsSync(outputPath)){
 	fs.mkdirSync(outputPath);
 }
 
-var shiftLoop = function (inputList, list) {
-	if(list === undefined){
-		list = inputList.slice();
-		console.time(outputPath);
-	}
-	if(list.length){
-		var imageName = list.shift();
-		var inputString = inputPath + '/' + imageName;
-		var outputString = jerpDerp(inputString);
+console.time(outputPath);
+var completed = 0;
+inputList.forEach(function(imageName){
+		var inputPathString = inputPath + '/' + imageName;
+		var outputPathString = jerpDerp(inputPathString);
 		var start = Date.now();
-		Jimp.read(inputString, function (err, image) {
-			if (err) throw err;
-			image
-				.quality(quality)
-				//.resize(960, 540)
-				.write(outputString, function(){
-					var time = (Date.now() - start);
-					console.log(outputString, time + 'ms');
-					shiftLoop(inputList, list);
-				});
-		});
-	} else {
-		console.timeEnd(outputPath);
-	}
-};
-
-shiftLoop(inputList);
+		child_process.exec(
+			[
+				'node',
+				'process_one_image.js',
+				inputPathString,
+				outputPathString,
+				85
+			].join(' '),
+			function(err, stdout, stderr){
+				if (err) {
+					console.error(err);
+					return;
+				}
+				var time = (Date.now() - start);
+				console.log([stdout, time, 'ms'].join(' ').replace(/\n/g, ' '));
+				completed++;
+				if(completed === inputList.length){
+					console.timeEnd(outputPath);
+				}
+			}
+		);
+});
