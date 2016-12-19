@@ -1,6 +1,7 @@
 //usage: node video_portfolio_content.js doubly_pyramidal-48-png 85
 //                              inputPath^                quality^
 var fs = require("fs");
+var JSZip = require("node-zip");
 var child_process = require("child_process");
 var jerpDerp = function(pngName){return pngName.replace(/png/gi, 'jpg');};
 var inputPath = process.argv[2];
@@ -32,19 +33,45 @@ if(!fs.existsSync(outputPath)){
 	fs.mkdirSync(outputPath);
 }
 
+var outputPathList = [];
+
+var zipImagesWhenDone = function(){
+	var zip = new JSZip();
+	var zipName = outputPath + '-' + quality + '.zip';
+	outputPathList.forEach(function(readImagePath){
+		var fileData = fs.readFileSync(readImagePath);
+		var fileName = readImagePath.split('/').pop();
+		zip.file(
+			fileName,
+			fileData
+		);
+	});
+	var data = zip.generate({
+		base64:false,
+		compression:'DEFLATE',
+		compressionOptions: {
+			level: 9
+		}
+	});
+	fs.writeFileSync(zipName, data, 'binary');
+	console.log('Finished creating zip: ' + zipName);
+};
+
 console.time(outputPath);
 var completed = 0;
-inputList.forEach(function(imageName){
+inputList.forEach(
+	function(imageName){
 		var inputPathString = inputPath + '/' + imageName;
 		var outputPathString = jerpDerp(inputPathString);
 		var start = Date.now();
+		outputPathList.push(outputPathString);
 		child_process.exec(
 			[
 				'node',
 				'process_one_image.js',
 				inputPathString,
 				outputPathString,
-				85
+				quality
 			].join(' '),
 			function(err, stdout, stderr){
 				if (err) {
@@ -53,10 +80,13 @@ inputList.forEach(function(imageName){
 				}
 				var time = (Date.now() - start);
 				console.log([stdout, time, 'ms'].join(' ').replace(/\n/g, ' '));
+
 				completed++;
 				if(completed === inputList.length){
 					console.timeEnd(outputPath);
+					zipImagesWhenDone()
 				}
 			}
 		);
-});
+	}
+);
