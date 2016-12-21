@@ -6,7 +6,8 @@ var child_process = require("child_process");
 var jerpDerp = function(pngName){return pngName.replace(/png/gi, 'jpg');};
 var inputPath = process.argv[2];
 var quality = parseInt(process.argv[3], 10);
-var outputPath = jerpDerp(inputPath);
+var outputPrefix = 'output/';
+var outputPath = jerpDerp(outputPrefix + inputPath);
 var pathInt = function(path){
 	var file = path.split('/').pop();
 	var int = parseInt(file, 10);
@@ -29,6 +30,9 @@ inputList = inputList
 		}
 		return result;
 	});
+if(!fs.existsSync(outputPrefix)){
+	fs.mkdirSync(outputPrefix);
+}
 if(!fs.existsSync(outputPath)){
 	fs.mkdirSync(outputPath);
 }
@@ -62,7 +66,7 @@ var completed = 0;
 inputList.forEach(
 	function(imageName){
 		var inputPathString = inputPath + '/' + imageName;
-		var outputPathString = jerpDerp(inputPathString);
+		var outputPathString = outputPrefix + jerpDerp(inputPathString);
 		var start = Date.now();
 		outputPathList.push(outputPathString);
 		child_process.exec(
@@ -90,3 +94,27 @@ inputList.forEach(
 		);
 	}
 );
+
+var makeThumb = function(){
+	var inputPathString = inputPath + '/0001.png';
+	var outputPathString = outputPath.replace('-jpg', '.jpg');
+	var start = Date.now();
+	child_process.exec(
+		[
+			'node',
+			'make_thumb.js',
+			inputPathString,
+			outputPathString,
+			quality
+		].join(' '),
+		function(err, stdout, stderr) {
+			if (err) {
+				console.error(err);
+				return;
+			}
+			var time = (Date.now() - start);
+			console.log([stdout, time, 'ms'].join(' ').replace(/\n/g, ' '));
+		}
+	);
+};
+makeThumb();
