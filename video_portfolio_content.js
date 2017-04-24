@@ -5,7 +5,6 @@ var fs = require("fs");
 var child_process = require("child_process");
 var inputPath = process.argv[2];
 var inputName = inputPath.replace('-png', '');
-var quality = parseInt(process.argv[3], 10);
 var outputPrefix = 'output/';
 if(!fs.existsSync(outputPrefix)){
 	fs.mkdirSync(outputPrefix);
@@ -14,12 +13,17 @@ if(!fs.existsSync(outputPrefix)){
 var childProcessIt = function(command, logName){
 	var start = Date.now();
 	console.log(logName + ' - Start');
+	console.log(command);
 	child_process.exec(
 		command,
 		function(err, stdout, stderr) {
 			console.log(logName + ' - End');
 			if (err) {
 				console.error(err);
+				return;
+			}
+			if (stderr) {
+				console.error(stderr);
 				return;
 			}
 			var time = (Date.now() - start);
@@ -43,17 +47,19 @@ var makeEncodeCommand = function(format) {
 	var pixFormat = 'yuv420p'; //change to 444 later when the client side can handle it
 	var resolution = format.resolution.join('x');
 	var bitrate = format.bitrate;
-	var outputPathString = outputPrefix + [inputName, resolution, pixFormat, bitrate].join('-') + '.hevc';
+	var outputPathString = outputPrefix + [inputName, resolution, pixFormat, bitrate].join('-') + '.webm';
 	return [
-		'ffmpeg -framerate 24 -f image2 -i',
+		'ffmpeg -y -framerate 24 -f image2 -i',
 		inputPath + '/%04d.png',
 		'-vcodec rawvideo -keyint_min 1',
 		'-s ' + resolution,
 		'-r 24',
+		'-c:v libvpx-vp9',
+		'-threads 4',
+		'-profile 0',
 		'-pix_fmt ' + pixFormat,
-		'-c:v libx265',
 		'-b:v ' + bitrate + 'k',
-		'-preset veryslow -x265-params keyint=1:ref=1:no-open-gop=1:weightp=0:weightb=0:cutree=0:rc-lookahead=0:bframes=0:scenecut=0:b-adapt=0:repeat-headers=1',
+		'-preset veryslow',
 		outputPathString
 	].join(' ');
 };
@@ -66,6 +72,7 @@ var makeVideos = function () {
 };
 
 var makeThumb = function(){
+	var quality = 85;
 	var inputPathString = inputPath + '/0001.png';
 	var outputPathString = outputPrefix + inputName + '.jpg';
 	var command = [
