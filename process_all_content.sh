@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-
-for f in *-png; do node video_portfolio_content.js "$f"; done
+inputPath=${1:-"../video_portfolio_content"}
+for f in $inputPath/*-png; do
+	node video_portfolio_content.js "$f";
+done

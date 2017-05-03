@@ -2,9 +2,11 @@
 //                              inputPath^
 
 var fs = require("fs");
+var path = require("path");
 var child_process = require("child_process");
 var inputPath = process.argv[2];
-var inputName = inputPath.replace('-png', '');
+var pathFlavor = inputPath.indexOf('\\') === -1 ? 'posix' : 'win32';
+var animationName = path[pathFlavor].basename(inputPath).replace('-png', '');
 var outputPrefix = 'output/';
 if(!fs.existsSync(outputPrefix)){
 	fs.mkdirSync(outputPrefix);
@@ -47,7 +49,7 @@ var makeEncodeCommand = function(format) {
 	var pixFormat = 'yuv444p';
 	var resolution = format.resolution.join('x');
 	var bitrate = format.bitrate;
-	var outputPathString = outputPrefix + [inputName, resolution, pixFormat, bitrate].join('-') + '.webm';
+	var outputPathString = outputPrefix + [animationName, resolution, pixFormat, bitrate].join('-') + '.webm';
 	return [
 		'ffmpeg -y -framerate 24 -f image2 -i',
 		inputPath + '/%04d.png',
@@ -74,7 +76,7 @@ var makeVideos = function () {
 var makeThumb = function(){
 	var quality = 85;
 	var inputPathString = inputPath + '/0001.png';
-	var outputPathString = outputPrefix + inputName + '.jpg';
+	var outputPathString = outputPrefix + animationName + '.jpg';
 	var command = [
 			'node',
 			'make_thumb.js',
