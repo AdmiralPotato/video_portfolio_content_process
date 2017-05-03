@@ -35,16 +35,16 @@ var childProcessIt = function(command, logName){
 var formatList = [
 	{
 		resolution: [1920,1080],
-		bitrate: 20000
+		bitrate: 40000
 	},
 	{
 		resolution: [960,540],
-		bitrate: 5000
+		bitrate: 10000
 	}
 ];
 
 var makeEncodeCommand = function(format) {
-	var pixFormat = 'yuv420p'; //change to 444 later when the client side can handle it
+	var pixFormat = 'yuv444p';
 	var resolution = format.resolution.join('x');
 	var bitrate = format.bitrate;
 	var outputPathString = outputPrefix + [inputName, resolution, pixFormat, bitrate].join('-') + '.webm';
@@ -56,7 +56,7 @@ var makeEncodeCommand = function(format) {
 		'-r 24',
 		'-c:v libvpx-vp9',
 		'-threads 4',
-		'-profile 0',
+		'-profile 1',
 		'-pix_fmt ' + pixFormat,
 		'-b:v ' + bitrate + 'k',
 		'-preset veryslow',
