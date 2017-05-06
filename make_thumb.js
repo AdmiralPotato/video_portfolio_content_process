@@ -1,14 +1,16 @@
-//usage: node make_thumb.js inputFilePath outputFilePath
+//usage: node make_thumb.js inputFilePath outputFilePath 1920x1080
 
 var Jimp = require("jimp");
-var inputPath = process.argv[2];
-var outputPath = process.argv[3];
-var quality = 85;
+var argv = process.argv;
+var inputPath = argv[2];
+var outputPath = argv[3];
+var size = argv[4].split('x');
+var quality = 95;
 
 Jimp.read(inputPath, function (err, image) {
 	if (err) throw err;
 	image
-		.resize(640, 360)
+		.resize(parseInt(size[0], 10), parseInt(size[1], 10))
 		.quality(quality)
 		.write(outputPath, function(){
 			console.log(outputPath);

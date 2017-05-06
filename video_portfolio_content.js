@@ -36,32 +36,26 @@ var childProcessIt = function(command, logName){
 
 var formatList = [
 	{
-		resolution: [1920,1080],
-		bitrate: 40000
+		resolution: [1920,1080]
 	},
 	{
-		resolution: [960,540],
-		bitrate: 10000
+		resolution: [960,540]
 	}
 ];
 
 var makeEncodeCommand = function(format) {
 	var pixFormat = 'yuv444p';
 	var resolution = format.resolution.join('x');
-	var bitrate = format.bitrate;
-	var outputPathString = outputPrefix + [animationName, resolution, pixFormat, bitrate].join('-') + '.webm';
+	var outputPathString = outputPrefix + [animationName, resolution, pixFormat, 'lossless'].join('-') + '.webm';
 	return [
 		'ffmpeg -y -framerate 24 -f image2 -i',
 		inputPath + '/%04d.png',
-		'-vcodec rawvideo -keyint_min 1',
 		'-s ' + resolution,
 		'-r 24',
 		'-c:v libvpx-vp9',
-		'-threads 4',
-		'-profile 1',
 		'-pix_fmt ' + pixFormat,
-		'-b:v ' + bitrate + 'k',
-		'-preset veryslow',
+		'-lossless 1',
+		'-threads 4',
 		outputPathString
 	].join(' ');
 };
@@ -73,19 +67,19 @@ var makeVideos = function () {
 	});
 };
 
-var makeThumb = function(){
-	var quality = 85;
+var makeThumb = function(size, name){
 	var inputPathString = inputPath + '/0001.png';
-	var outputPathString = outputPrefix + animationName + '.jpg';
+	var outputPathString = outputPrefix + animationName + '-' + name + '.jpg';
 	var command = [
 			'node',
 			'make_thumb.js',
 			inputPathString,
 			outputPathString,
-			quality
+			size
 		].join(' ');
 	childProcessIt(command, 'makeThumb');
 };
 
 makeVideos();
-makeThumb();
+makeThumb('1920x1080', 'preview');
+makeThumb('640x360', 'thumb');
