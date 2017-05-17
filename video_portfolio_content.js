@@ -2,17 +2,19 @@
 //                              inputPath^
 
 var fs = require("fs");
+var JSZip = require("node-zip");
 var path = require("path");
 var child_process = require("child_process");
 var inputPath = process.argv[2];
 var pathFlavor = inputPath.indexOf('\\') === -1 ? 'posix' : 'win32';
 var animationName = path[pathFlavor].basename(inputPath).replace('-png', '');
-var outputPrefix = 'output/';
+var frames = parseInt(inputPath.split('-')[1], 10);
+var outputPrefix = 'output_jpg/';
 if(!fs.existsSync(outputPrefix)){
 	fs.mkdirSync(outputPrefix);
 }
 
-var childProcessIt = function(command, logName){
+var childProcessIt = function(command, logName, callback){
 	var start = Date.now();
 	console.log(logName + ' - Start');
 	console.log(command);
@@ -20,6 +22,9 @@ var childProcessIt = function(command, logName){
 		command,
 		function(err, stdout, stderr) {
 			console.log(logName + ' - End');
+			if(callback){
+				callback();
+			}
 			if (err) {
 				console.error(err);
 				return;
@@ -35,51 +40,90 @@ var childProcessIt = function(command, logName){
 };
 
 var formatList = [
-	{
-		resolution: [1920,1080]
-	},
-	{
-		resolution: [960,540]
-	}
+	'1920x1080',
+	'960x540'
 ];
 
-var makeEncodeCommand = function(format) {
-	var pixFormat = 'yuv444p';
-	var resolution = format.resolution.join('x');
-	var outputPathString = outputPrefix + [animationName, resolution, pixFormat, 'lossless'].join('-') + '.webm';
+var makeImageZips = function () {
+	formatList.forEach(function(resolution){
+		var outputPathString = outputPrefix + [animationName, resolution].join('-');
+		var pngToJpgCommand = makeJpgSequenceCommand(resolution, outputPathString);
+		var zipOnComplete = function(){
+			makeZip(outputPathString);
+		};
+		if(!fs.existsSync(outputPathString)){
+			fs.mkdirSync(outputPathString);
+		}
+		childProcessIt(pngToJpgCommand, 'makeJpgSequence' + resolution, zipOnComplete);
+	});
+};
+
+var makeJpgSequenceCommand = function(resolution, outputPathString) {
+	var blur = resolution === formatList[0] ? '-define filter:blur=0.5' : '';
 	return [
-		'ffmpeg -y -framerate 24 -f image2 -i',
-		inputPath + '/%04d.png',
-		'-s ' + resolution,
-		'-r 24',
-		'-c:v libvpx-vp9',
-		'-pix_fmt ' + pixFormat,
-		'-lossless 1',
-		'-threads 4',
+		'convert',
+		'-strip',
+		'-resize ' + resolution,
+		blur,
+		'-quality 97%',
+		inputPath + '/*.png',
+		'-scene 1', // output starts at 0001.jpg instead of 0000.jpg
+		outputPathString + '/%04d.jpg'
+	].join(' ');
+};
+
+var makeZip = function(outputPathString){
+	var zip = new JSZip();
+	var zipName = outputPathString + '.zip';
+	var jpgList = [];
+	var frame = frames;
+	while (frame--) {
+		jpgList.push(outputPathString + '/' + padLeft(frame + 1, 4) + '.jpg');
+	}
+	jpgList.forEach(function(readImagePath){
+		var fileData = fs.readFileSync(readImagePath);
+		var fileName = readImagePath.split('/').pop();
+		zip.file(
+			fileName,
+			fileData
+		);
+	});
+	var data = zip.generate({
+		base64:false,
+		compression:'DEFLATE',
+		compressionOptions: {
+			level: 9
+		}
+	});
+	fs.writeFileSync(zipName, data, 'binary');
+	console.log('Finished creating zip: ' + zipName);
+};
+
+var padLeft = function(nr, n, str){
+	return Array(n-String(nr).length+1).join(str||'0')+nr;
+};
+
+var makeThumb = function(resolution, name){
+	var command = makeProgressivePreviewCommand(resolution, name);
+	childProcessIt(command, 'makeThumb');
+};
+
+var makeProgressivePreviewCommand = function(resolution, name) {
+	var inputPathString = inputPath + '/0001.png';
+	var outputPathString = outputPrefix + animationName + '-' + name + '.jpg';
+	var blur = resolution === formatList[0] ? '-define filter:blur=0.5' : '';
+	return [
+		'convert',
+		'-strip',
+		'-resize ' + resolution,
+		blur,
+		'-interlace Plane',
+		'-quality 90%',
+		inputPathString,
 		outputPathString
 	].join(' ');
 };
 
-var makeVideos = function () {
-	formatList.forEach(function(format){
-		var command = makeEncodeCommand(format);
-		childProcessIt(command, 'makeVideo' + format.resolution.join('x'));
-	});
-};
-
-var makeThumb = function(size, name){
-	var inputPathString = inputPath + '/0001.png';
-	var outputPathString = outputPrefix + animationName + '-' + name + '.jpg';
-	var command = [
-			'node',
-			'make_thumb.js',
-			inputPathString,
-			outputPathString,
-			size
-		].join(' ');
-	childProcessIt(command, 'makeThumb');
-};
-
-makeVideos();
+makeImageZips();
 makeThumb('1920x1080', 'preview');
 makeThumb('640x360', 'thumb');
