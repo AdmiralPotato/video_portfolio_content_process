@@ -4,7 +4,7 @@
   "description": "",
   "main": "video_portfolio_content.js",
   "dependencies": {
-    "node-zip": "^1.1.1"
+    "jszip": "^3.1.3"
   },
   "devDependencies": {},
   "author": "Admiral Potato <admiral@nuclearpixel.com>",

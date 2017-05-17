@@ -2,7 +2,7 @@
 //                              inputPath^
 
 var fs = require("fs");
-var JSZip = require("node-zip");
+var JSZip = require("jszip");
 var path = require("path");
 var child_process = require("child_process");
 var inputPath = process.argv[2];
@@ -88,14 +88,19 @@ var makeZip = function(outputPathString){
 			fileData
 		);
 	});
-	var data = zip.generate({
-		base64:false,
-		compression:'DEFLATE',
-		compressionOptions: {
-			level: 9
-		}
-	});
-	fs.writeFileSync(zipName, data, 'binary');
+	zip
+		.generateNodeStream({
+			type:'nodebuffer',
+			streamFiles:true,
+			compression:'DEFLATE',
+			compressionOptions: {
+				level: 9
+			}
+		})
+		.pipe(fs.createWriteStream(zipName))
+		.on('finish', function () {
+			console.log(zipName + ' written.');
+		});
 	console.log('Finished creating zip: ' + zipName);
 };
 
