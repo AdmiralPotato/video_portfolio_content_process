@@ -108,27 +108,31 @@ var padLeft = function(nr, n, str){
 	return Array(n-String(nr).length+1).join(str||'0')+nr;
 };
 
-var makeThumb = function(resolution, name){
-	var command = makeProgressivePreviewCommand(resolution, name);
+var makeThumb = function(resolution, name, quality, enableOverlay){
+	var command = makeProgressivePreviewCommand(resolution, name, quality, enableOverlay);
 	childProcessIt(command, 'makeThumb');
 };
 
-var makeProgressivePreviewCommand = function(resolution, name) {
+var makeProgressivePreviewCommand = function(resolution, name, quality, enableOverlay) {
 	var inputPathString = inputPath + '/0001.png';
 	var outputPathString = outputPrefix + animationName + '-' + name + '.jpg';
 	var blur = resolution === formatList[0] ? '-define filter:blur=0.5' : '';
+	var composite = enableOverlay ? 'overlay_play.png -composite' : '';
 	return [
 		'convert',
+		'-gravity center',
+		inputPathString,
+		composite,
 		'-strip',
 		'-resize ' + resolution,
 		blur,
 		'-interlace Plane',
-		'-quality 90%',
-		inputPathString,
+		'-quality '+ (quality || 90) +'%',
 		outputPathString
 	].join(' ');
 };
 
 makeImageZips();
+makeThumb('1920x1080', 'og_preview', 97, true);
 makeThumb('1920x1080', 'preview');
 makeThumb('640x360', 'thumb');
